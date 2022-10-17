@@ -1,7 +1,7 @@
 # PDF_Extract
 
 
-Automatizes pdf extraction from an original pdf document based on an Excel sheet, outputting separate pdf files for each found value.
+Automatization of pdf extraction from an original pdf document based on an Excel sheet, outputting separate pdf files for each found value.
 
 
 ### User story
