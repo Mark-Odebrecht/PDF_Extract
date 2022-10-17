@@ -46,7 +46,6 @@ Guidance for this conversion was found on the internet[^5].
 <br>
 <br>
 
-References:
 [^1]: https://www.geeksforgeeks.org/extract-text-from-pdf-file-using-python/#:~:text=pdf%20reader%20object%20has%20function,and%20returns%20the%20page%20object.&text=Page%20object%20has%20function%20extractText,text%20from%20the%20pdf%20page.&text=At%20last%2C%20we%20close%20the%20pdf%20file%20object.
 <br>
 
