@@ -1,18 +1,17 @@
-from pandas_datareader import data as pdr
 import datetime as dt
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
-plt.style.use('fivethirtyeight')
 import yfinance as yf
-yf.pdr_override()
-from datetime import timedelta
 import plotly.express as px
 import plotly.graph_objects as go
 import os
 from zipfile import ZipFile
 import glob
-
+from pandas_datareader import data as pdr
+from datetime import timedelta
+plt.style.use('fivethirtyeight')
+yf.pdr_override()
 
 # Date formating
 
