@@ -13,6 +13,9 @@ import os
 from zipfile import ZipFile
 import glob
 
+
+# Date formating
+
 date = dt.date.today()
 year = str(date.year-2000)
 
@@ -64,122 +67,122 @@ tickers = ["ABCB4", "ALPA4", "ABEV3", "ANIM3", "ARZZ3",
 
 
 for ticker in tickers:
-  ticker = ticker+'.SA'
-  path = str_time
-  zip_path = str_time
-  total_days = 560
-  end = dt.datetime.now() # get current time
-  current_date_formated = end.strftime('%Y-%m-%d') # end date
-  d1 = end - dt.timedelta(days=total_days)
-  start = d1.strftime('%Y-%m-%d') # start date
+    ticker = ticker+'.SA'
+    PATH = str_time
+    TOTAL_DAYS = 560
+    end = dt.datetime.now() # get current time
+    d1 = end - dt.timedelta(days=TOTAL_DAYS)
+    start = d1.strftime('%Y-%m-%d') # start date
 
-  df = pdr.DataReader(ticker, start= start, end= end)[['Close']].reset_index()
-  df['Date'] = pd.to_datetime(df['Date']).dt.date
-  df.sort_values('Date', inplace=True)
+    df = pdr.DataReader(ticker, start= start, end= end)[['Close']].reset_index()
+    df['Date'] = pd.to_datetime(df['Date']).dt.date
+    df.sort_values('Date', inplace=True)
 
   # df = get_symbols(tickers, start, end)
 
-  df=df.set_index(['Date'])
+    df=df.set_index(['Date'])
 
-  def get_sma(prices, rate):
-    return prices.rolling(rate).mean()
+    def get_sma(prices, rate):
+        return prices.rolling(rate).mean()
 
-  def get_bollinger_bands(prices, rate=20):
-      sma = get_sma(prices, rate)
-      std = prices.rolling(rate).std()
-      b_up = sma + std * 2 # Calculate top band
-      b_down = sma - std * 2 # Calculate bottom band
-      return b_up, b_down
+    def get_bollinger_bands(prices, rate=20):
+        sma = get_sma(prices, rate)
+        std = prices.rolling(rate).std()
+        b_up = sma + std * 2 # Calculate top band
+        b_down = sma - std * 2 # Calculate bottom band
+        return b_up, b_down
 
-  df['b_up'], df['b_down'] = get_bollinger_bands(df['Close'])
+    df['b_up'], df['b_down'] = get_bollinger_bands(df['Close'])
 
-  # function to define SMA
-  def SMA (data, period=30, column = 'Close'):
-    return data[column].rolling(window=period).mean()
+    # function to define SMA
+    def SMA (data, period=30, column = 'Close'):
+      return data[column].rolling(window=period).mean()
 
-  # build and show the data set
-  df['SMA20'] = SMA(df, 20)
-  df['SMA50'] = SMA(df, 50)
-  df['SMA100'] = SMA(df, 100)
-  df['SMA200'] = SMA(df, 200)
-  df['Simple_Returns'] = df.pct_change(1)['Close']
-  df['Log_Returns'] = np.log(1+df['Simple_Returns'])
-  df['Ratios'] = df['Close'] / df['SMA200']
+    # build and show the data set
+    df['SMA20'] = SMA(df, 20)
+    df['SMA50'] = SMA(df, 50)
+    df['SMA100'] = SMA(df, 100)
+    df['SMA200'] = SMA(df, 200)
+    df['Simple_Returns'] = df.pct_change(1)['Close']
+    df['Log_Returns'] = np.log(1+df['Simple_Returns'])
+    df['Ratios'] = df['Close'] / df['SMA200']
 
-  df['price_change'] = df['Close'].pct_change()
-  df['upmove'] = df['price_change'].apply(lambda x: x if x > 0 else 0)
-  df['downmove'] = df['price_change'].apply(lambda x: abs(x) if x < 0 else 0)
-  df['avgup'] = df['upmove'].ewm(span=19).mean()
-  df['avgdown'] = df['downmove'].ewm(span=19).mean()
+    df['price_change'] = df['Close'].pct_change()
+    df['upmove'] = df['price_change'].apply(lambda x: x if x > 0 else 0)
+    df['downmove'] = df['price_change'].apply(lambda x: abs(x) if x < 0 else 0)
+    df['avgup'] = df['upmove'].ewm(span=19).mean()
+    df['avgdown'] = df['downmove'].ewm(span=19).mean()
 
-  df = df.dropna()
+    df = df.dropna()
 
-  df['RS'] = df['avgup']/df['avgdown']
-  df['RSI'] = df['RS'].apply(lambda x: 100-(100/(x+1)))
+    df['RS'] = df['avgup']/df['avgdown']
+    df['RSI'] = df['RS'].apply(lambda x: 100-(100/(x+1)))
 
-  
+    percentiles = [3, 15, 20, 50, 80, 85, 97]
 
-  percentiles = [3, 15, 20, 50, 80, 85, 97]
+    # removing any NaN values from Ratios and storing them into a new column called ratios
+    ratios = df['Ratios'].dropna()
 
-  # removing any NaN values from Ratios and storing them into a new column called ratios
-  ratios = df['Ratios'].dropna()
+    # geting the values of the percentiles
+    percentile_values = np.percentile(ratios, percentiles)
 
-  # geting the values of the percentiles
-  percentile_values = np.percentile(ratios, percentiles)
+    sell = percentile_values[6] # 99th perdentile threshold were I want to sell
+    buy = percentile_values[0] # 1st percentile threshold were I wnat to buy
 
-  sell = percentile_values[6] # 99th perdentile threshold were I want to sell
-  buy = percentile_values[0] # 1st percentile threshold were I wnat to buy
+    # Creating column 'Positions' to add -1 where the ratio is greater the 85th percentile (sell) and NaN otherwise
+    df['Positions'] = np.where(df['Ratios'] > sell, -1, np.nan)
 
-  # Creating column 'Positions' to add -1 where the ratio is greater the 85th percentile (sell) and NaN otherwise
-  df['Positions'] = np.where(df['Ratios'] > sell, -1, np.nan)
+    # Adding 1 where the ratio is less than the 15th percentile (buy) and put the current value otherwise
+    df['Positions'] = np.where(df['Ratios'] < buy, 1, df['Positions'])
 
-  # Adding 1 where the ratio is less than the 15th percentile (buy) and put the current value otherwise
-  df['Positions'] = np.where(df['Ratios'] < buy, 1, df['Positions'])
+    # Bollinger band signals
 
-  # Bollinger band signals
+    df['P_bol'] = np.where(df['Close']<df['b_down'], 1, np.nan)
 
-  df['P_bol'] = np.where(df['Close']<df['b_down'], 1, np.nan)
+    df['P_bol'] = np.where(df['Close']>df['b_up'], -1, df['P_bol'])
 
-  df['P_bol'] = np.where(df['Close']>df['b_up'], -1, df['P_bol'])
-
-  df['Buy'] = np.where(df.Positions == 1, df['Close'], np.nan)
-  df['Sell'] = np.where(df.Positions == -1, df['Close'], np.nan)
-  df['Bollinger_buy'] = np.where(df.P_bol == 1, df['Close'], np.nan)
-  df['Bollinger_sell'] = np.where(df.P_bol == -1, df['Close'], np.nan)
+    df['Buy'] = np.where(df.Positions == 1, df['Close'], np.nan)
+    df['Sell'] = np.where(df.Positions == -1, df['Close'], np.nan)
+    df['Bollinger_buy'] = np.where(df.P_bol == 1, df['Close'], np.nan)
+    df['Bollinger_sell'] = np.where(df.P_bol == -1, df['Close'], np.nan)
 
 
-  plt.figure(figsize=(24, 12))
-  plt.xlabel('Date')
-  plt.xticks(fontsize=16)
-  plt.ylabel('Close Price')
-  
-  ax1 = plt.subplot(211)
-  ax1.set_title('Close Price w/ Buy & Sell Signals for '+ticker+' on '+day+'/'+month+'/'+year)
-  ax1.plot(df.Close, alpha = 0.7, label = 'Close', color='gray')
-  ax1.plot(df.b_up, alpha=0.5, label = 'Bollinger up', color='darkorange')
-  ax1.plot(df.b_down, alpha=0.5, label = 'Bollinger up', color='darkorange')
-  ax1.plot(df.SMA20, alpha = 0.5, label = 'SMA20', color='green')
-  ax1.plot(df.SMA50, alpha = 0.5, label = 'SMA50', color='red')
-  ax1.plot(df.SMA200, alpha = 0.5, label = 'SMA200', color='blue')
-  ax1.scatter(df.index, df.Buy, color = 'yellow', label = 'Buy Signal', marker = 'o', alpha = 1, s=300)
-  ax1.scatter(df.index, df.Sell, color = 'red', label = 'Sell Signal', marker = 'o', alpha = 1, s=300)
-  ax1.scatter(df.index, df.Bollinger_buy, color = 'cornflowerblue', label = 'Bollinger buy signal', marker = '2', alpha = 1, s=200)
-  ax1.scatter(df.index, df.Bollinger_sell, color = 'lime', label = 'Bollinger sell signal', marker = '1', alpha = 1, s=200)
-  # ax1.legend()
+    plt.figure(figsize=(24, 12))
+    plt.xlabel('Date')
+    plt.xticks(fontsize=16)
+    plt.ylabel('Close Price')
+     
+    ax1 = plt.subplot(211)
+    ax1.set_title('Close Price w/ Buy & Sell Signals for '+ticker+' on '+day+'/'+month+'/'+year)
+    ax1.plot(df.Close, alpha = 0.7, label = 'Close', color='gray')
+    ax1.plot(df.b_up, alpha=0.5, label = 'Bollinger up', color='darkorange')
+    ax1.plot(df.b_down, alpha=0.5, label = 'Bollinger up', color='darkorange')
+    ax1.plot(df.SMA20, alpha = 0.5, label = 'SMA20', color='green')
+    ax1.plot(df.SMA50, alpha = 0.5, label = 'SMA50', color='red')
+    ax1.plot(df.SMA200, alpha = 0.5, label = 'SMA200', color='blue')
+    ax1.scatter(df.index, df.Buy, color = 'yellow', label = 'Buy Signal',
+    marker = 'o', alpha = 1, s=300)
+    ax1.scatter(df.index, df.Sell, color = 'red', label = 'Sell Signal', 
+    marker = 'o', alpha = 1, s=300)
+    ax1.scatter(df.index, df.Bollinger_buy, color = 'cornflowerblue', 
+    label = 'Bollinger buy signal', marker = '2', alpha = 1, s=200)
+    ax1.scatter(df.index, df.Bollinger_sell, color = 'lime', 
+    abel = 'Bollinger sell signal', marker = '1', alpha = 1, s=200)
+    # ax1.legend()
 
-  ax2 = plt.subplot(212, sharex=ax1)
-  ax2.set_title('RSI')
-  ax2.plot(df.index, df['RSI'], color = 'limegreen')
-  ax2.axhline(30, linestyle='--', alpha=0.5, color='gray')
-  ax2.axhline(70, linestyle='--', alpha=0.5, color='gray')
-  ax2.axhline(50, alpha=0.7, color='dodgerblue')
-  ax2.grid(False)
+    ax2 = plt.subplot(212, sharex=ax1)
+    ax2.set_title('RSI')
+    ax2.plot(df.index, df['RSI'], color = 'limegreen')
+    ax2.axhline(30, linestyle='--', alpha=0.5, color='gray')
+    ax2.axhline(70, linestyle='--', alpha=0.5, color='gray')
+    ax2.axhline(50, alpha=0.7, color='dodgerblue')
+    ax2.grid(False)
 
-  plt.savefig(path+ticker+' - '+str_time+'.png')
+    plt.savefig(PATH+ticker+' - '+str_time+'.png')
 
 
 with ZipFile(str_time+'.zip', 'w') as f:
-    for file in glob.glob(zip_path+'/*'):
+    for file in glob.glob(PATH+'/*.png'):
         f.write(file)
 
 # files.download (str_time+'.zip')
