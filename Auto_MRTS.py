@@ -151,7 +151,7 @@ for ticker in tickers:
     plt.xlabel('Date')
     plt.xticks(fontsize=16)
     plt.ylabel('Close Price')
-     
+    
     ax1 = plt.subplot(211)
     ax1.set_title('Close Price w/ Buy & Sell Signals for '+ticker+' on '+day+'/'+month+'/'+year)
     ax1.plot(df.Close, alpha = 0.7, label = 'Close', color='gray')
